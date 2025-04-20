@@ -1,0 +1,7 @@
+__pycache__
+__init__.py
+log*
+*.txt
+*.gz
+cifar*
+.venv
