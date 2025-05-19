@@ -5,3 +5,5 @@ log*
 *.gz
 cifar*
 .venv
+mnist_batches
+.vscode

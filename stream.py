@@ -1,3 +1,4 @@
+# python stream.py --folder mnist_batches --batch-size 10000 --split train --sleep 5
 import time
 import json
 import pickle
@@ -42,15 +43,16 @@ class Dataset:
         
         return batch
 
-    def sendCIFARBatchFileToSpark(self, tcp_connection, input_batch_file, batch_size, split="train"):
+    def sendMNISTBatchFileToSpark(self, tcp_connection, input_batch_file, batch_size, split="train"):
         if split == "train":
-            total_batch = 50_000 / batch_size + 1
+            total_batch = 60_000 / batch_size + 1
         else:
             total_batch = 10_000 / batch_size + 1
 
         pbar = tqdm(total_batch)
         data_received = 0
         for file in input_batch_file:
+            print(f"\nProcessing batch file: {file}")
             batches = self.data_generator(file, batch_size)
             for batch in batches:
                 images, labels = batch
@@ -79,8 +81,8 @@ class Dataset:
                 pbar.update(n=1)
                 pbar.set_description(f"it: {data_received} | received : {batch_size} images")
                 time.sleep(sleep_time)
-
-    def connectTCP(self):   
+                
+    def connectTCP(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((TCP_IP, TCP_PORT))
@@ -91,33 +93,34 @@ class Dataset:
 
         return connection, address
 
-    def streamCIFARDataset(self, tcp_connection, folder, batch_size):
-        CIFAR_BATCHES = [
-            os.path.join(folder, 'data_batch_1'),
-            os.path.join(folder, 'data_batch_2'),
-            os.path.join(folder, 'data_batch_3'),
-            os.path.join(folder, 'data_batch_4'),
-            os.path.join(folder, 'data_batch_5'),
-            os.path.join(folder, 'test_batch'),
+    def streamMNISTDataset(self, tcp_connection, folder, batch_size):
+        MNIST_BATCHES = [
+            os.path.join(folder, 'mnist_train_batch_1'),
+            os.path.join(folder, 'mnist_train_batch_2'),
+            os.path.join(folder, 'mnist_train_batch_3'),
+            os.path.join(folder, 'mnist_train_batch_4'),
+            os.path.join(folder, 'mnist_train_batch_5'),
+            os.path.join(folder, 'mnist_train_batch_6'),
+            os.path.join(folder, 'mnist_test_batch')
         ]
-        CIFAR_BATCHES = CIFAR_BATCHES[:-1] if train_test_split=='train' else [CIFAR_BATCHES[-1]]
-        self.sendCIFARBatchFileToSpark(tcp_connection, CIFAR_BATCHES, batch_size, train_test_split)
+        MNIST_BATCHES = MNIST_BATCHES[:-1] if train_test_split == "train" else MNIST_BATCHES[-1:]
+        self.sendMNISTBatchFileToSpark(tcp_connection, MNIST_BATCHES, batch_size, train_test_split)
 
 if __name__ == '__main__':
     args = parser.parse_args()
-
     data_folder = args.folder
     batch_size = args.batch_size
     endless = args.endless
     sleep_time = args.sleep
     train_test_split = args.split
     dataset = Dataset()
+
     tcp_connection, _ = dataset.connectTCP()
     
     if endless:
         while True:
-            dataset.streamCIFARDataset(tcp_connection, data_folder, batch_size)
+            dataset.streamMNISTDataset(tcp_connection, data_folder, batch_size)
     else:
-        dataset.streamCIFARDataset(tcp_connection, data_folder, batch_size)
+        dataset.streamMNISTDataset(tcp_connection, data_folder, batch_size)
 
     tcp_connection.close()

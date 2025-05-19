@@ -1,20 +1,31 @@
 from trainer import SparkConfig, Trainer
-from models import SVM
-from transforms import Transforms, RandomHorizontalFlip, Normalize
+from transforms.transforms import Transforms
+from transforms.normalize import Normalize
+from models.lr import LR
+from pyspark.sql import SparkSession
 
 transforms = Transforms([
-    RandomHorizontalFlip(p=0.345), 
     Normalize(
-        mean=(0.4913997551666284, 0.48215855929893703, 0.4465309133731618), 
-        std=(0.24703225141799082, 0.24348516474564, 0.26158783926049628)
+        mean=(0.1307,), 
+        std=(0.3081,)
     )
 ])
 
 if __name__ == "__main__":
-
     spark_config = SparkConfig()
-
-    svm = SVM(loss="squared_hinge", penalty="l2")
-    trainer = Trainer(svm, "train", spark_config, transforms)
+    spark = SparkSession.builder \
+        .appName(spark_config.appName) \
+        .config("spark.driver.memory", spark_config.driver_memory) \
+        .config("spark.executor.heartbeatInterval", "3600s") \
+        .config("spark.network.timeout", "3601s") \
+        .master(f"{spark_config.host}[{spark_config.receivers}]") \
+        .getOrCreate()
+    
+    # Get SparkContext from SparkSession
+    sc = spark.sparkContext
+    
+    model = LR(penalty='l2', C=1.0, max_iter=100)
+    trainer = Trainer(model, split="train", spark_config=spark_config, transforms=transforms, spark_context=sc)
     trainer.train()
-    # trainer.predict()
+    
+    spark.stop()

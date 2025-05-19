@@ -1,38 +1,38 @@
 import pyspark
-
 from pyspark.context import SparkContext
 from pyspark.streaming.context import StreamingContext
 from pyspark.sql.context import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import IntegerType, StructField, StructType
 from pyspark.ml.linalg import VectorUDT
-from transforms import Transforms
+from transforms.transforms import Transforms
 
 class SparkConfig:
-    appName = "CIFAR"
-    receivers = 4
+    appName = "MNIST"
+    receivers = '*'
     host = "local"
     stream_host = "localhost"
     port = 6100
-    batch_interval = 2
+    batch_interval = 10
+    driver_memory = "240g"
 
 from dataloader import DataLoader
 
 class Trainer:
     def __init__(self, 
                  model, 
-                 split:str, 
-                 spark_config:SparkConfig, 
-                 transforms: Transforms) -> None:
-
+                 split: str, 
+                 spark_config: SparkConfig, 
+                 transforms: Transforms,
+                 spark_context: SparkContext) -> None:
         self.model = model
         self.split = split
         self.sparkConf = spark_config
         self.transforms = transforms
-        self.sc = SparkContext(f"{self.sparkConf.host}[{self.sparkConf.receivers}]",f"{self.sparkConf.appName}")
-        self.ssc = StreamingContext(self.sc,self.sparkConf.batch_interval)
+        self.sc = spark_context  
+        self.ssc = StreamingContext(self.sc, self.sparkConf.batch_interval)
         self.sqlContext = SQLContext(self.sc)
-        self.dataloader = DataLoader(self.sc,self.ssc,self.sqlContext,self.sparkConf,self.transforms)
+        self.dataloader = DataLoader(self.sc, self.ssc, self.sqlContext, self.sparkConf, self.transforms)
 
     def train(self):
         stream = self.dataloader.parse_stream()
@@ -94,5 +94,3 @@ class Trainer:
     #     print(f"batch: {self.batch_count}")
     #     print("Total Batch Size of RDD Received :",rdd.count())
     #     print("---------------------------------------")   
-        
-        
