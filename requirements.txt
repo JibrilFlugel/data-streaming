@@ -1,0 +1,12 @@
+joblibspark
+matplotlib
+numpy
+Pillow
+pyspark
+scikit_learn
+tensorflow
+tensorflow_datasets
+tqdm
+torch
+torchvision
+pandas
